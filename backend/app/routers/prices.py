@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 from datetime import datetime
 from ..database import get_db
+from ..dependencies import require_api_key
 from ..models import Price, Product, Supplier
 from ..schemas import PriceCreate, PriceOut, PriceScrapeRequest, SupplierOut, ProductOut
 
@@ -36,7 +37,7 @@ def list_prices(
     return [_enrich_price(p) for p in prices]
 
 
-@router.post("", response_model=PriceOut)
+@router.post("", response_model=PriceOut, dependencies=[Depends(require_api_key)])
 def upsert_price(payload: PriceCreate, db: Session = Depends(get_db)):
     # Check if price already exists for this product+supplier combo
     existing = db.query(Price).filter(
@@ -59,7 +60,7 @@ def upsert_price(payload: PriceCreate, db: Session = Depends(get_db)):
     return _enrich_price(price)
 
 
-@router.delete("/{price_id}")
+@router.delete("/{price_id}", dependencies=[Depends(require_api_key)])
 def delete_price(price_id: int, db: Session = Depends(get_db)):
     price = db.query(Price).filter(Price.id == price_id).first()
     if not price:
@@ -69,7 +70,7 @@ def delete_price(price_id: int, db: Session = Depends(get_db)):
     return {"ok": True}
 
 
-@router.post("/scrape")
+@router.post("/scrape", dependencies=[Depends(require_api_key)])
 async def trigger_scrape(
     payload: PriceScrapeRequest,
     background_tasks: BackgroundTasks,

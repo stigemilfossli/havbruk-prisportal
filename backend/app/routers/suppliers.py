@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from ..database import get_db
+from ..dependencies import require_api_key
 from ..models import Supplier, Price
 from ..schemas import SupplierCreate, SupplierUpdate, SupplierOut
 
@@ -40,7 +41,7 @@ def get_supplier(supplier_id: int, db: Session = Depends(get_db)):
     return _enrich(supplier, db)
 
 
-@router.post("", response_model=SupplierOut)
+@router.post("", response_model=SupplierOut, dependencies=[Depends(require_api_key)])
 def create_supplier(payload: SupplierCreate, db: Session = Depends(get_db)):
     supplier = Supplier(**payload.model_dump())
     db.add(supplier)
@@ -49,7 +50,7 @@ def create_supplier(payload: SupplierCreate, db: Session = Depends(get_db)):
     return _enrich(supplier, db)
 
 
-@router.put("/{supplier_id}", response_model=SupplierOut)
+@router.put("/{supplier_id}", response_model=SupplierOut, dependencies=[Depends(require_api_key)])
 def update_supplier(supplier_id: int, payload: SupplierUpdate, db: Session = Depends(get_db)):
     supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
     if not supplier:
@@ -61,7 +62,7 @@ def update_supplier(supplier_id: int, payload: SupplierUpdate, db: Session = Dep
     return _enrich(supplier, db)
 
 
-@router.delete("/{supplier_id}")
+@router.delete("/{supplier_id}", dependencies=[Depends(require_api_key)])
 def delete_supplier(supplier_id: int, db: Session = Depends(get_db)):
     supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
     if not supplier:

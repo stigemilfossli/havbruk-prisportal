@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Optional, List
 from ..database import get_db
+from ..dependencies import require_api_key
 from ..models import Product, Price, Supplier
 from ..schemas import ProductCreate, ProductUpdate, ProductOut, PriceOut
 
@@ -76,7 +77,7 @@ def get_product_prices(product_id: int, db: Session = Depends(get_db)):
     return result
 
 
-@router.post("", response_model=ProductOut)
+@router.post("", response_model=ProductOut, dependencies=[Depends(require_api_key)])
 def create_product(payload: ProductCreate, db: Session = Depends(get_db)):
     product = Product(**payload.model_dump())
     db.add(product)
@@ -85,7 +86,7 @@ def create_product(payload: ProductCreate, db: Session = Depends(get_db)):
     return _enrich(product, db)
 
 
-@router.put("/{product_id}", response_model=ProductOut)
+@router.put("/{product_id}", response_model=ProductOut, dependencies=[Depends(require_api_key)])
 def update_product(product_id: int, payload: ProductUpdate, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
@@ -97,7 +98,7 @@ def update_product(product_id: int, payload: ProductUpdate, db: Session = Depend
     return _enrich(product, db)
 
 
-@router.delete("/{product_id}")
+@router.delete("/{product_id}", dependencies=[Depends(require_api_key)])
 def delete_product(product_id: int, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
