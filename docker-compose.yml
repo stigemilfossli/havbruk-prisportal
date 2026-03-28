@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
+      - FROM_EMAIL=${FROM_EMAIL:-prisportal@yourdomain.no}
+      - FROM_NAME=${FROM_NAME:-Havbruk Prisportal}
+      - BASE_URL=${BASE_URL:-http://localhost:3000}
+      - DATABASE_URL=sqlite:///./havbruk.db
+      - SECRET_KEY=${SECRET_KEY:-change-this-in-production}
+    volumes:
+      - ./backend:/app
+      - backend_db:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_db:

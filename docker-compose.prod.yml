@@ -1,0 +1,36 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
+      - FROM_EMAIL=${FROM_EMAIL:-demo@havbrukprisportal.no}
+      - FROM_NAME=${FROM_NAME:-Havbruk Prisportal}
+      - BASE_URL=${BASE_URL}
+      - DATABASE_URL=sqlite:////data/havbruk.db
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+    volumes:
+      - db_data:/data
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=
+    ports:
+      - "3002:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  db_data:
