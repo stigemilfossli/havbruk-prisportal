@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(code --list-extensions)",
+      "Bash(\"/c/Users/Eg_er/AppData/Local/Programs/Microsoft VS Code/bin/code\" --list-extensions)",
+      "Bash(\"/c/Users/Eg_er/AppData/Local/Programs/Microsoft VS Code/bin/code\" --install-extension PhilHindle.errorlens --force)",
+      "Bash(VSCODE=\"/c/Users/Eg_er/AppData/Local/Programs/Microsoft VS Code/bin/code\")",
+      "Bash(\"$VSCODE\" --list-extensions --show-versions)",
+      "Read(//c/Users/Eg_er/**)",
+      "Read(//c/Users/Eg_er/AppData/Roaming/Claude/**)",
+      "Bash(python3 -c \":*)",
+      "Bash(/dev/null echo:*)",
+      "Bash(cat /c/Users/Eg_er/.vscode/extensions/anthropic.claude-code-*/package.json)",
+      "Bash(find /c/Users/Eg_er/.vscode/extensions -name package.json -path *claude*)"
+    ]
+  }
+}

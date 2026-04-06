@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 from app.models import User, Subscription
 import os
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-in-prod")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable must be set")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
@@ -55,20 +57,36 @@ def create_user(db: Session, email: str, password: str, full_name: str, company_
 
 
 # FastAPI dependency
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.database import get_db
 
 security = HTTPBearer(auto_error=False)
 
 
+def get_token_from_request(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get token from either Authorization header or cookie"""
+    # Try cookie first
+    token = request.cookies.get("auth_token")
+    if token:
+        return token
+    
+    # Fall back to Authorization header
+    if credentials:
+        return credentials.credentials
+    
+    return None
+
+
 def get_current_user(
+    request: Request = None,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
-    if not credentials:
+    token = get_token_from_request(request, credentials) if request else credentials.credentials if credentials else None
+    if not token:
         raise HTTPException(status_code=401, detail="Ikke innlogget")
-    payload = decode_token(credentials.credentials)
+    payload = decode_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Ugyldig token")
     user = db.query(User).filter(User.id == payload.get("sub")).first()
@@ -78,12 +96,14 @@ def get_current_user(
 
 
 def get_current_user_optional(
+    request: Request = None,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
-    if not credentials:
+    token = get_token_from_request(request, credentials) if request else credentials.credentials if credentials else None
+    if not token:
         return None
-    payload = decode_token(credentials.credentials)
+    payload = decode_token(token)
     if not payload:
         return None
     return db.query(User).filter(User.id == payload.get("sub")).first()

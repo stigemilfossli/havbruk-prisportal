@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { createPortal } from '@/lib/api'
 import { useState, Suspense } from 'react'
 import clsx from 'clsx'
+import { useToast } from '@/components/Toast'
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'Gratis',
@@ -36,6 +37,7 @@ function KontoContent() {
   const checkoutStatus = searchParams.get('checkout')
   const { user, logout, loading } = useAuth()
   const [portalLoading, setPortalLoading] = useState(false)
+  const { showError } = useToast()
 
   useEffect(() => {
     if (!loading && !user) {
@@ -49,7 +51,7 @@ function KontoContent() {
       const { url } = await createPortal()
       window.location.href = url
     } catch {
-      alert('Kunne ikke åpne abonnementsportalen. Prøv igjen.')
+      showError('Kunne ikke åpne abonnementsportalen', 'Prøv igjen.')
     } finally {
       setPortalLoading(false)
     }

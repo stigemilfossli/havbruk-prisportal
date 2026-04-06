@@ -1,7 +1,10 @@
-from sqlalchemy.orm import Session
+ det from sqlalchemy.orm import Session
 from .models import Supplier, Product, Price
 from datetime import datetime
 import random
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 SUPPLIERS = [
@@ -392,7 +395,7 @@ def seed_database(db: Session) -> None:
     if db.query(Supplier).count() > 0:
         return  # Already seeded
 
-    print("Seeding database...")
+    logger.info("Seeding database...")
 
     # Insert suppliers
     db_suppliers = []
@@ -450,4 +453,4 @@ def seed_database(db: Session) -> None:
             db.add(price)
 
     db.commit()
-    print(f"Database seeded: {len(db_suppliers)} leverandører, {len(db_products)} produkter.")
+    logger.info(f"Database seeded: {len(db_suppliers)} leverandører, {len(db_products)} produkter.")

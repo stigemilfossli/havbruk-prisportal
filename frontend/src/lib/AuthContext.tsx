@@ -11,13 +11,13 @@ import {
 import { useRouter } from 'next/navigation'
 import type { AuthUser } from './auth'
 import { setToken, getToken, removeToken } from './auth'
-import { getMe } from './api'
+import { getMe, logout } from './api'
 
 interface AuthContextValue {
   user: AuthUser | null
   loading: boolean
   login: (token: string, user: AuthUser) => void
-  logout: () => void
+  logout: () => Promise<void>
   refreshUser: () => Promise<void>
 }
 
@@ -29,18 +29,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const refreshUser = useCallback(async () => {
-    const token = getToken()
-    if (!token) {
-      setUser(null)
-      setLoading(false)
-      return
-    }
     try {
       const me = await getMe()
       setUser(me)
     } catch {
-      // Token is invalid or expired — clear it
-      removeToken()
+      // Token is invalid or expired
       setUser(null)
     } finally {
       setLoading(false)
@@ -53,18 +46,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshUser])
 
   const login = useCallback((token: string, userData: AuthUser) => {
-    setToken(token)
+    // Token is now set via httpOnly cookie by backend
     setUser(userData)
   }, [])
 
-  const logout = useCallback(() => {
-    removeToken()
-    setUser(null)
-    router.push('/')
+  const handleLogout = useCallback(async () => {
+    try {
+      await logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      setUser(null)
+      router.push('/')
+    }
   }, [router])
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, logout: handleLogout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

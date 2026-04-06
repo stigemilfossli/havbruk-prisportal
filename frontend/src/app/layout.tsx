@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import Navbar from '@/components/Navbar'
 import { AuthProvider } from '@/lib/AuthContext'
+import { ToastProvider } from '@/components/Toast'
 
 export const metadata: Metadata = {
   title: 'Havbruk Prisportal',
@@ -18,10 +19,11 @@ export default function RootLayout({
     <html lang="no">
       <body className="min-h-screen bg-gray-50 flex flex-col">
         <AuthProvider>
-          <Navbar />
-          <main className="flex-1">
-            {children}
-          </main>
+          <ToastProvider>
+            <Navbar />
+            <main className="flex-1">
+              {children}
+            </main>
           <footer className="bg-navy-900 text-white mt-auto">
             <div className="max-w-7xl mx-auto px-4 py-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -49,8 +51,10 @@ export default function RootLayout({
               </div>
             </div>
           </footer>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>
   )
 }
+

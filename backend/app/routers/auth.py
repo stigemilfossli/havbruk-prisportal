@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.database import get_db
 from app.services.auth_service import (
@@ -10,6 +10,7 @@ from app.services.auth_service import (
     get_user_by_email,
     create_user,
     get_current_user,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 from app.models import User
 
@@ -68,7 +69,7 @@ def _build_user_response(user: User) -> UserResponse:
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=TokenResponse)
-def register(body: RegisterRequest, db: Session = Depends(get_db)):
+def register(body: RegisterRequest, response: Response, db: Session = Depends(get_db)):
     if get_user_by_email(db, body.email):
         raise HTTPException(status_code=400, detail="E-post er allerede registrert")
     user = create_user(
@@ -79,6 +80,18 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
         company_name=body.company_name,
     )
     token = create_access_token({"sub": user.id})
+    
+    # Set httpOnly cookie
+    response.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        secure=True,  # Use True in production with HTTPS
+        samesite="lax",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+    
     return TokenResponse(
         access_token=token,
         user=_build_user_response(user),
@@ -86,13 +99,25 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest, db: Session = Depends(get_db)):
+def login(body: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = get_user_by_email(db, body.email)
     if not user or not verify_password(body.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Feil e-post eller passord")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Brukerkontoen er deaktivert")
     token = create_access_token({"sub": user.id})
+    
+    # Set httpOnly cookie
+    response.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        secure=True,  # Use True in production with HTTPS
+        samesite="lax",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+    
     return TokenResponse(
         access_token=token,
         user=_build_user_response(user),
@@ -105,5 +130,10 @@ def me(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/logout")
-def logout():
+def logout(response: Response):
+    # Clear the cookie
+    response.delete_cookie(
+        key="auth_token",
+        path="/",
+    )
     return {"ok": True, "message": "Logget ut"}

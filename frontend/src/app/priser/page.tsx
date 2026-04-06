@@ -6,6 +6,8 @@ import { useAuth } from '@/lib/AuthContext'
 import { createCheckout } from '@/lib/api'
 import { useState } from 'react'
 import clsx from 'clsx'
+import { useToast } from '@/components/Toast'
+import { useToast } from '@/components/Toast'
 
 // ── Pricing model: per-vessel tiers with volume discount ──────────────────────
 //
@@ -122,6 +124,8 @@ export default function PriserPage() {
   const router = useRouter()
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const { showError } = useToast()
+  const { showError } = useToast()
 
   async function handleCta(planKey: string) {
     if (!user) {
@@ -133,7 +137,7 @@ export default function PriserPage() {
       const { url } = await createCheckout(planKey)
       window.location.href = url
     } catch {
-      alert('Kunne ikke starte betaling. Prøv igjen.')
+      showError('Kunne ikke starte betaling', 'Prøv igjen senere.')
     } finally {
       setLoadingPlan(null)
     }
@@ -331,14 +335,4 @@ export default function PriserPage() {
                 <span className="text-gray-400 text-lg ml-2">{openFaq === i ? '−' : '+'}</span>
               </button>
               {openFaq === i && (
-                <div className="px-5 pb-4 text-sm text-gray-600 border-t border-gray-100 pt-3">
-                  {item.a}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
+                <div className="px-

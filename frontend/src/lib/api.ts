@@ -21,6 +21,7 @@ async function request<T>(
 ): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // Include cookies in all requests
     ...options,
   })
   if (!res.ok) {
@@ -31,13 +32,15 @@ async function request<T>(
 }
 
 function authHeaders(): Record<string, string> {
-  const token = getToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
+  // Tokens are now in httpOnly cookies, not in Authorization header
+  // The cookie is automatically included with credentials: 'include'
+  return {}
 }
 
 async function authRequest<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    credentials: 'include', // Include cookies in all requests
     ...options,
   })
   if (!res.ok) {
@@ -235,6 +238,12 @@ export async function login(data: {
   return request<TokenResponse>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify(data),
+  })
+}
+
+export async function logout(): Promise<{ ok: boolean; message: string }> {
+  return request<{ ok: boolean; message: string }>('/api/auth/logout', {
+    method: 'POST',
   })
 }
 
