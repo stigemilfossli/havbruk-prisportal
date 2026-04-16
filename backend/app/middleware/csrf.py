@@ -37,7 +37,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         response.set_cookie(
             key=self.cookie_name,
             value=token,
-            httponly=True,
+            httponly=False,  # Must be readable by JS to set X-CSRF-Token header
             secure=True,
             samesite='strict',
             max_age=3600 * 24 * 7,

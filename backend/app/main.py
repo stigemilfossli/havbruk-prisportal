@@ -115,8 +115,8 @@ def health_check():
     from .database import SessionLocal as SL
     session = SL()
     try:
-        # Check database connection
-        session.execute("SELECT 1")
+        from sqlalchemy import text
+        session.execute(text("SELECT 1"))
         health_status = {
             "status": "healthy",
             "timestamp": datetime.utcnow().isoformat(),

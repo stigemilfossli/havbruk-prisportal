@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel, ConfigDict, validator
+import re
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 
@@ -26,32 +27,33 @@ class RegisterRequest(BaseModel):
     full_name: str
     company_name: str
 
-    @validator('email')
+    @field_validator('email')
+    @classmethod
     def validate_email_format(cls, v):
         if not validate_email(v):
             raise ValueError('Invalid email format')
-        return v.lower()  # Normalize to lowercase
+        return v.lower()
 
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def validate_password(cls, v):
         is_valid, error_message = validate_password_strength(v)
         if not is_valid:
             raise ValueError(error_message)
         return v
 
-    @validator('full_name')
+    @field_validator('full_name')
+    @classmethod
     def sanitize_full_name(cls, v):
-        # Remove potentially dangerous characters
-        import re
         v = re.sub(r'[<>"\']', '', v)
         if len(v) > 100:
             raise ValueError('Name too long')
         return v.strip()
 
-    @validator('company_name')
+    @field_validator('company_name')
+    @classmethod
     def sanitize_company_name(cls, v):
         if v:
-            import re
             v = re.sub(r'[<>"\']', '', v)
             if len(v) > 200:
                 raise ValueError('Company name too long')
@@ -62,7 +64,8 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
-    @validator('email')
+    @field_validator('email')
+    @classmethod
     def validate_email_format(cls, v):
         if not validate_email(v):
             raise ValueError('Invalid email format')

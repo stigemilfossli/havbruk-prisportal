@@ -140,24 +140,3 @@ def sanitize_json_input(data: Any) -> Any:
         return data
 
 
-def generate_csrf_token() -> str:
-    """
-    Generate a CSRF token.
-    In production, use a proper CSRF library.
-    """
-    import secrets
-    return secrets.token_urlsafe(32)
-
-
-def validate_csrf_token(token: str, stored_token: str) -> bool:
-    """
-    Validate CSRF token using constant-time comparison.
-    """
-    import hmac
-    import hashlib
-    
-    # Use constant-time comparison to prevent timing attacks
-    return hmac.compare_digest(
-        token.encode('utf-8'),
-        stored_token.encode('utf-8')
-    )
