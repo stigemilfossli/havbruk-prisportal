@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, validator
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 
@@ -13,6 +13,7 @@ from app.services.auth_service import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 from app.models import User
+from app.utils.security import validate_password_strength, validate_email
 
 router = APIRouter(tags=["auth"])
 
@@ -25,10 +26,47 @@ class RegisterRequest(BaseModel):
     full_name: str
     company_name: str
 
+    @validator('email')
+    def validate_email_format(cls, v):
+        if not validate_email(v):
+            raise ValueError('Invalid email format')
+        return v.lower()  # Normalize to lowercase
+
+    @validator('password')
+    def validate_password(cls, v):
+        is_valid, error_message = validate_password_strength(v)
+        if not is_valid:
+            raise ValueError(error_message)
+        return v
+
+    @validator('full_name')
+    def sanitize_full_name(cls, v):
+        # Remove potentially dangerous characters
+        import re
+        v = re.sub(r'[<>"\']', '', v)
+        if len(v) > 100:
+            raise ValueError('Name too long')
+        return v.strip()
+
+    @validator('company_name')
+    def sanitize_company_name(cls, v):
+        if v:
+            import re
+            v = re.sub(r'[<>"\']', '', v)
+            if len(v) > 200:
+                raise ValueError('Company name too long')
+        return v.strip()
+
 
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+    @validator('email')
+    def validate_email_format(cls, v):
+        if not validate_email(v):
+            raise ValueError('Invalid email format')
+        return v.lower()
 
 
 class UserResponse(BaseModel):
@@ -70,8 +108,11 @@ def _build_user_response(user: User) -> UserResponse:
 
 @router.post("/register", response_model=TokenResponse)
 def register(body: RegisterRequest, response: Response, db: Session = Depends(get_db)):
+    # Check if email already exists
     if get_user_by_email(db, body.email):
         raise HTTPException(status_code=400, detail="E-post er allerede registrert")
+    
+    # Create user
     user = create_user(
         db,
         email=body.email,
@@ -79,6 +120,8 @@ def register(body: RegisterRequest, response: Response, db: Session = Depends(ge
         full_name=body.full_name,
         company_name=body.company_name,
     )
+    
+    # Create token
     token = create_access_token({"sub": user.id})
     
     # Set httpOnly cookie
@@ -105,6 +148,8 @@ def login(body: LoginRequest, response: Response, db: Session = Depends(get_db))
         raise HTTPException(status_code=401, detail="Feil e-post eller passord")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Brukerkontoen er deaktivert")
+    
+    # Create token
     token = create_access_token({"sub": user.id})
     
     # Set httpOnly cookie

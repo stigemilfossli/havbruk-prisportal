@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
@@ -6,22 +6,34 @@ from datetime import datetime, timedelta
 from .database import engine, SessionLocal
 from . import models
 from .seed import seed_database
-from .routers import products, suppliers, quotes, prices
+from .routers import products, suppliers, quotes, prices, price_history, alerts, export
 from .routers.auth import router as auth_router
 from .routers.billing import router as billing_router
 from .routers.notes import router as notes_router
+
+# Setup logging
+from .logging_config import setup_logging
+setup_logging()
+import logging
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: create tables and seed if empty
+    logger.info("Starting application...")
     models.Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         seed_database(db)
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+        raise
     finally:
         db.close()
     yield
+    logger.info("Shutting down application...")
 
 
 app = FastAPI(
@@ -47,6 +59,14 @@ app.add_middleware(
     max_age=600,  # 10 minutes cache for preflight requests
 )
 
+from .middleware.security_headers import SecurityHeadersMiddleware
+from .middleware.csrf import CSRFMiddleware
+from .middleware.rate_limit import RateLimitMiddleware
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CSRFMiddleware)
+app.add_middleware(RateLimitMiddleware)
+
 app.include_router(products.router)
 app.include_router(suppliers.router)
 app.include_router(quotes.router)
@@ -54,10 +74,14 @@ app.include_router(prices.router)
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(billing_router, prefix="/api/billing")
 app.include_router(notes_router)
+app.include_router(price_history.router)
+app.include_router(alerts.router)
+app.include_router(export.router)
 
 
 @app.get("/")
 def root():
+    logger.info("Root endpoint accessed")
     return {"message": "Havbruk Prisportal API", "version": "1.0.0", "docs": "/docs"}
 
 
@@ -68,7 +92,7 @@ def get_stats(db=None):
     session = SL()
     try:
         week_ago = datetime.utcnow() - timedelta(days=7)
-        return {
+        stats = {
             "supplier_count": session.query(Supplier).count(),
             "product_count": session.query(Product).count(),
             "price_count": session.query(Price).count(),
@@ -76,10 +100,43 @@ def get_stats(db=None):
                 Price.last_updated >= week_ago
             ).count(),
         }
+        logger.info(f"Stats retrieved: {stats}")
+        return stats
+    except Exception as e:
+        logger.error(f"Failed to retrieve stats: {e}")
+        raise
+    finally:
+        session.close()
+
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for monitoring"""
+    from .database import SessionLocal as SL
+    session = SL()
+    try:
+        # Check database connection
+        session.execute("SELECT 1")
+        health_status = {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": "connected",
+        }
+        logger.debug("Health check passed")
+        return health_status
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": "disconnected",
+            "error": str(e),
+        }, 503
     finally:
         session.close()
 
 
 if __name__ == "__main__":
     import uvicorn
+    logger.info("Starting uvicorn server...")
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

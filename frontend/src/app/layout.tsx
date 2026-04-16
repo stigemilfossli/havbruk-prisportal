@@ -3,6 +3,7 @@ import './globals.css'
 import Navbar from '@/components/Navbar'
 import { AuthProvider } from '@/lib/AuthContext'
 import { ToastProvider } from '@/components/Toast'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export const metadata: Metadata = {
   title: 'Havbruk Prisportal',
@@ -20,6 +21,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-gray-50 flex flex-col">
         <AuthProvider>
           <ToastProvider>
+            <ErrorBoundary>
             <Navbar />
             <main className="flex-1">
               {children}
@@ -51,6 +53,7 @@ export default function RootLayout({
               </div>
             </div>
           </footer>
+          </ErrorBoundary>
           </ToastProvider>
         </AuthProvider>
       </body>

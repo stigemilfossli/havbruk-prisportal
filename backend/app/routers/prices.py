@@ -79,3 +79,4 @@ async def trigger_scrape(
     from ..services.scraper_service import run_scrape_job
     background_tasks.add_task(run_scrape_job, payload.supplier_ids, payload.product_ids)
     return {"message": "Skraping startet i bakgrunnen", "status": "started"}
+

@@ -6,14 +6,15 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
       - FROM_EMAIL=${FROM_EMAIL:-prisportal@yourdomain.no}
       - FROM_NAME=${FROM_NAME:-Havbruk Prisportal}
       - BASE_URL=${BASE_URL:-http://localhost:3000}
       - DATABASE_URL=sqlite:///./havbruk.db
-      - SECRET_KEY=${SECRET_KEY:-change-this-in-production}
+      - SECRET_KEY=${SECRET_KEY:-}
+      - API_KEY=${API_KEY:-}
     volumes:
       - ./backend:/app
       - backend_db:/app/data
@@ -24,7 +25,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "3002:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
@@ -33,3 +34,4 @@ services:
 
 volumes:
   backend_db:
+
